@@ -8,6 +8,9 @@ const bodyParser = require("body-parser");
 const helmet = require("helmet");
 const compression = require("compression");
 
+const { connectDB } = require("./config/db");
+const { syncDB } = require("./models");
+
 const app = express();
 
 // Middleware
@@ -17,6 +20,9 @@ app.use(compression());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// Connect Database & Sync Models
+connectDB().then(syncDB);
 
 // Test Route
 app.get("/", (req, res) => {
