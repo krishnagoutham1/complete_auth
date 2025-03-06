@@ -10,6 +10,7 @@ const compression = require("compression");
 
 const { connectDB } = require("./config/db");
 const { syncDB } = require("./models");
+const { connectRedis } = require("./config/redis");
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use(cookieParser());
 
 // Connect Database & Sync Models
 connectDB().then(syncDB);
+connectRedis(); // Connect to Redis
 
 // Test Route
 app.get("/", (req, res) => {
