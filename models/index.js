@@ -8,7 +8,7 @@ const User = require("./User");
 const db = {
   sequelize,
   Sequelize,
-  User: User(sequelize, Sequelize),
+  // User: User(sequelize, Sequelize),
 };
 
 // Sync all models

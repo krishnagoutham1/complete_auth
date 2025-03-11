@@ -1,13 +1,13 @@
-module.exports = (sequelize, DataTypes) => {
-  const User = sequelize.define("User", {
+const { DataTypes } = require("sequelize");
+const { sequelize } = require("../config/db");
+
+const User = sequelize.define(
+  "User",
+  {
     id: {
-      type: DataTypes.INTEGER,
-      autoIncrement: true,
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
-    },
-    name: {
-      type: DataTypes.STRING,
-      allowNull: false,
     },
     email: {
       type: DataTypes.STRING,
@@ -16,25 +16,60 @@ module.exports = (sequelize, DataTypes) => {
     },
     password: {
       type: DataTypes.STRING,
-      allowNull: true, // NULL for Google OAuth users
+      allowNull: true, // Nullable for OAuth users
     },
-    provider: {
-      type: DataTypes.ENUM("local", "google"),
-      defaultValue: "local",
-    },
-    provider_id: {
+    name: {
       type: DataTypes.STRING,
-      allowNull: true, // Only for OAuth users
+      allowNull: true,
     },
-    email_verified: {
+    activation_token: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    reset_password_token: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+
+    is_verified: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
-    email_otp_enabled: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: true,
-    },
-  });
 
-  return User;
-};
+    // Status ENUM instead of BOOLEAN
+    status: {
+      type: DataTypes.ENUM(
+        "pending",
+        "active",
+        "inactive",
+        "deleted",
+        "banned"
+      ),
+      defaultValue: "pending",
+    },
+
+    // Role ENUM
+    role: {
+      type: DataTypes.ENUM(
+        "user",
+        "admin",
+        "moderator",
+        "editor",
+        "super_admin"
+      ),
+      defaultValue: "user",
+    },
+
+    last_login: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+  },
+  {
+    timestamps: true, // adds createdAt & updatedAt
+    paranoid: true, // enables soft deletes (deletedAt)
+    tableName: "Users",
+  }
+);
+
+module.exports = User;

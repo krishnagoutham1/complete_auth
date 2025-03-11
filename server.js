@@ -8,9 +8,10 @@ const bodyParser = require("body-parser");
 const helmet = require("helmet");
 const compression = require("compression");
 
-const { connectDB } = require("./config/db");
-const { syncDB } = require("./models");
+const { connectDB, syncDB } = require("./config/db");
 const { connectRedis } = require("./config/redis");
+
+const authRoute = require("./routes/authRoute");
 
 const app = express();
 
@@ -30,6 +31,8 @@ connectRedis(); // Connect to Redis
 app.get("/", (req, res) => {
   res.send("Authentication API is running...");
 });
+
+app.use("/auth", authRoute);
 
 // Start Server
 app.listen(PORT, () => {

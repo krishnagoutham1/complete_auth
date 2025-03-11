@@ -30,4 +30,9 @@ const connectDB = async () => {
   }
 };
 
-module.exports = { sequelize, connectDB };
+const syncDB = async () => {
+  await sequelize.sync({ alter: true }); // Automatically sync database changes
+  console.log("✅ All models synchronized.");
+};
+
+module.exports = { sequelize, connectDB, syncDB };
