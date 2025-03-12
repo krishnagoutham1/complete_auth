@@ -9,6 +9,10 @@ const User = sequelize.define(
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
     },
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     email: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -16,24 +20,17 @@ const User = sequelize.define(
     },
     password: {
       type: DataTypes.STRING,
-      allowNull: true, // Nullable for OAuth users
-    },
-    name: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    activation_token: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    reset_password_token: {
-      type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: false,
     },
 
     is_verified: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
+    },
+
+    otp_login: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
     },
 
     // Status ENUM instead of BOOLEAN
