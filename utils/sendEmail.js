@@ -61,7 +61,7 @@ const reset_password_email = async ({ to, subject, html }) => {
   }
 };
 
-const login_otp_email = async ({ to, otp, html }) => {
+const login_otp_email = async ({ to, otp }) => {
   try {
     const msg = {
       to,

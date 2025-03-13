@@ -31,7 +31,7 @@ const connectDB = async () => {
 };
 
 const syncDB = async () => {
-  await sequelize.sync({ alter: true }); // Automatically sync database changes
+  await sequelize.sync(); // Automatically sync database changes
   console.log("✅ All models synchronized.");
 };
 

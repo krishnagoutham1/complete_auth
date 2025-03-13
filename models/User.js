@@ -10,16 +10,16 @@ const User = sequelize.define(
       primaryKey: true,
     },
     name: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(100),
       allowNull: false,
     },
     email: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(255),
       allowNull: false,
       unique: true,
     },
     password: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(100),
       allowNull: false,
     },
 
@@ -33,7 +33,6 @@ const User = sequelize.define(
       defaultValue: true,
     },
 
-    // Status ENUM instead of BOOLEAN
     status: {
       type: DataTypes.ENUM(
         "pending",
@@ -45,7 +44,6 @@ const User = sequelize.define(
       defaultValue: "pending",
     },
 
-    // Role ENUM
     role: {
       type: DataTypes.ENUM(
         "user",
@@ -63,8 +61,8 @@ const User = sequelize.define(
     },
   },
   {
-    timestamps: true, // adds createdAt & updatedAt
-    paranoid: true, // enables soft deletes (deletedAt)
+    timestamps: true,
+    paranoid: true,
     tableName: "Users",
   }
 );
