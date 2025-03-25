@@ -14,15 +14,6 @@ const connectRedis = async () => {
   try {
     await redisClient.connect();
     console.log("✅ Redis connected successfully.");
-
-    // Set a value in Redis with expiration time of 5 minutes (300 seconds)
-    await redisClient.set("testKey", "connected to redis db", {
-      EX: 300, // 300 seconds = 5 minutes
-    });
-
-    // Optionally, get and log the value to verify
-    const value = await redisClient.get("testKey");
-    console.log(`🔍 Retrieved value: ${value}`);
   } catch (err) {
     console.error("❌ Redis connection failed:", err);
     process.exit(1);
