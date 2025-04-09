@@ -28,8 +28,24 @@ connectDB().then(syncDB);
 connectRedis(); // Connect to Redis
 
 // Test Route
-app.get("/", (req, res) => {
-  res.send("Authentication API is running...");
+const jwt = require("jsonwebtoken");
+
+app.get("/test", (req, res) => {
+  const token = req.cookies?.accessToken;
+
+  if (!token) {
+    return res.status(403).json({ message: "Access token missing" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    return res.status(200).json({
+      message: "Authenticated request",
+      user: decoded, // contains { id, role, ... }
+    });
+  } catch (err) {
+    return res.status(403).json({ message: "Invalid or expired token" });
+  }
 });
 
 app.use("/auth", authRoute);

@@ -9,6 +9,11 @@ const bcrypt = require("bcrypt");
 const generateOtp = require("../utils/generateOtp");
 const { redisClient } = require("../config/redis");
 const RedisKeys = require("../utils/redisKeys");
+const {
+  generateAccessToken,
+  generateRefreshToken,
+} = require("../utils/tokens");
+const { v4: uuidv4 } = require("uuid");
 
 const register = async (req, res) => {
   try {
@@ -23,10 +28,11 @@ const register = async (req, res) => {
     const existingUser = await User.findOne({ where: { email } });
 
     if (existingUser)
-      return res.status(400).json({ message: "Email already exists" });
-
-    if (existingUser && !existingUser.is_verified)
-      return res.status(400).json({ message: "Verification pending" });
+      return res.status(400).json({
+        message: !existingUser.is_verified
+          ? "Verification pending"
+          : "Email already exists",
+      });
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -42,7 +48,7 @@ const register = async (req, res) => {
       { expiresIn: "10m" }
     );
 
-    const verifyURL = `${process.env.CLIENT_URL}/verify/${activationToken}`;
+    const verifyURL = `${process.env.CLIENT_URL}/verify-email/${activationToken}`;
 
     await verification_email({
       to: email,
@@ -66,10 +72,10 @@ const verifyEmail = async (req, res) => {
     const { token } = req.params;
 
     const decodedToken = jwt.verify(token, process.env.JWT_ACTIVATION_SECRET);
-
+    console.log(decodedToken);
     const user = await User.findByPk(decodedToken.id);
 
-    if (user) {
+    if (!user) {
       return res
         .status(404)
         .json({ message: "User not found or Invalid Token" });
@@ -98,6 +104,7 @@ const verifyEmail = async (req, res) => {
     if (err.name === "TokenExpiredError") {
       return res.status(400).json({
         message: "Token has expired, please request a new verification email.",
+        expired: true,
       });
     } else if (err.name === "JsonWebTokenError") {
       return res.status(400).json({
@@ -202,9 +209,11 @@ const login = async (req, res) => {
       await redisClient.del(RedisKeys.RESEND_OTP_ATTEMPT(user.id));
       await redisClient.del(RedisKeys.RESEND_OTP_COOLDOWN(user.id));
 
-      return res
-        .status(200)
-        .json({ message: "Otp sent successfully", id: user.id });
+      return res.status(200).json({
+        message: "Otp sent successfully",
+        id: user.id,
+        test: login_otp,
+      });
     } else {
       const previous_login = user.last_login;
 
@@ -268,6 +277,40 @@ const verifyLoginOtp = async (req, res) => {
         redisClient.del(RedisKeys.LOGIN_OTP_ATTEMPT(userId)),
       ]);
 
+      const accessToken = generateAccessToken({ id: user.id, role: user.role });
+
+      res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production", // true in prod
+        sameSite: "strict",
+        maxAge: 15 * 60 * 1000, // 15 minutes
+      });
+
+      const refreshId = uuidv4();
+
+      res.cookie("refresh_id", refreshId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "Strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+
+      const refreshToken = generateRefreshToken({ id: user.id });
+
+      const sessionMeta = {
+        refresh: refreshToken,
+        userAgent: req.headers["user-agent"] || null,
+        ip: req.ip,
+      };
+
+      await redisClient.set(
+        RedisKeys.REFRESH_TOKEN_ID({ userId, refreshId }),
+        JSON.stringify(sessionMeta),
+        {
+          EX: 7 * 24 * 60 * 60,
+        }
+      );
+
       return res.status(200).json({
         message: "login successfull",
         data: {
@@ -312,9 +355,11 @@ const resendLoginOtp = async (req, res) => {
     }
 
     const existingOtp = await redisClient.get(RedisKeys.LOGIN_OTP(userId));
+
     if (!existingOtp) {
       return res.status(404).json({
         message: "OTP expired or not found. Please initiate login again.",
+        initiateLogin: true,
       });
     }
 
@@ -328,7 +373,7 @@ const resendLoginOtp = async (req, res) => {
         message: `Please wait ${cooldownTTL} seconds before resending OTP.`,
       });
     }
-
+    // check any chance of -2 then write esle === -2 ...
     let otpAttempts = await redisClient.get(otpAttemptsKey);
     otpAttempts = otpAttempts ? parseInt(otpAttempts) : 0;
 
