@@ -44,23 +44,6 @@ const welcome_email = async ({ to, name }) => {
   }
 };
 
-const reset_password_email = async ({ to, subject, html }) => {
-  try {
-    const msg = {
-      to,
-      from: process.env.EMAIL_FROM,
-      subject,
-      html, // HTML content instead of plain text
-    };
-
-    await sgMail.send(msg);
-    console.log(`✅ Email sent to ${to}`);
-  } catch (err) {
-    console.error("❌ Error sending email:", err.response?.body || err.message);
-    throw new Error("Email not sent");
-  }
-};
-
 const login_otp_email = async ({ to, otp }) => {
   try {
     const msg = {
@@ -78,9 +61,25 @@ const login_otp_email = async ({ to, otp }) => {
   }
 };
 
+const reset_password_link = async ({ to, link }) => {
+  try {
+    const msg = {
+      to,
+      from: { email: process.env.EMAIL_FROM, name: process.env.EMAIL_NAME },
+      subject: "Reset Password Link",
+      html: `<h1>your link : ${link}</h1>`,
+    };
+    await sgMail.send(msg);
+    console.log(`✅ Email sent to ${to}`);
+  } catch (err) {
+    console.error("❌ Error sending email:", err.response?.body || err.message);
+    throw new Error("Email not sent");
+  }
+};
+
 module.exports = {
   welcome_email,
   verification_email,
-  reset_password_email,
   login_otp_email,
+  reset_password_link,
 };

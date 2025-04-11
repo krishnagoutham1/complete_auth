@@ -3,6 +3,7 @@ const {
   verification_email,
   welcome_email,
   login_otp_email,
+  reset_password_link,
 } = require("../utils/sendEmail");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
@@ -12,8 +13,11 @@ const RedisKeys = require("../utils/redisKeys");
 const {
   generateAccessToken,
   generateRefreshToken,
+  generateEmailVerificationToken,
+  getResePasswordToken,
 } = require("../utils/tokens");
 const { v4: uuidv4 } = require("uuid");
+const { use } = require("../routes/authRoute");
 
 const register = async (req, res) => {
   try {
@@ -26,7 +30,7 @@ const register = async (req, res) => {
     }
 
     const existingUser = await User.findOne({ where: { email } });
-
+    console.log(existingUser, "hhhh");
     if (existingUser)
       return res.status(400).json({
         message: !existingUser.is_verified
@@ -42,24 +46,21 @@ const register = async (req, res) => {
       password: hashedPassword,
     });
 
-    const activationToken = jwt.sign(
-      { id: newUser.id },
-      process.env.JWT_ACTIVATION_SECRET,
-      { expiresIn: "10m" }
-    );
+    const activationToken = generateEmailVerificationToken({ id: newUser.id });
 
-    const verifyURL = `${process.env.CLIENT_URL}/verify-email/${activationToken}`;
+    const verificationLink = `${process.env.CLIENT_URL}/verify-email/${activationToken}`;
 
     await verification_email({
       to: email,
       name: name,
-      verification_link: verifyURL,
+      verification_link: verificationLink,
     });
 
     return res.status(201).json({
       message:
         "User registered! Please check your email to activate your account.",
       data: { name, email },
+      success: true,
     });
   } catch (err) {
     console.log(err);
@@ -82,9 +83,10 @@ const verifyEmail = async (req, res) => {
     }
 
     if (user.is_verified) {
-      return res
-        .status(400)
-        .json({ message: "Account already verified pls login" });
+      return res.status(400).json({
+        message: "Account already verified please login",
+        showLogin: true,
+      });
     }
 
     user.is_verified = true;
@@ -99,10 +101,23 @@ const verifyEmail = async (req, res) => {
 
     return res.json({
       message: "Account verification successful pls login to continue",
+      success: true,
     });
   } catch (err) {
     if (err.name === "TokenExpiredError") {
-      return res.status(400).json({
+      const decoded = jwt.decode(req.params.token);
+
+      if (decoded?.id) {
+        const user = await User.findByPk(decoded.id);
+        if (user?.is_verified) {
+          return res.status(400).json({
+            message: "Account already verified. Please login.",
+            showLogin: true,
+          });
+        }
+      }
+
+      return res.status(401).json({
         message: "Token has expired, please request a new verification email.",
         expired: true,
       });
@@ -111,7 +126,6 @@ const verifyEmail = async (req, res) => {
         message: "Invalid token, please request a new verification email.",
       });
     } else {
-      console.error(err);
       return res
         .status(500)
         .json({ message: "Internal Server Error", error: err });
@@ -141,7 +155,7 @@ const resendEmailVerification = async (req, res) => {
       { expiresIn: "10m" }
     );
 
-    const verificationLink = `${process.env.CLIENT_URL}/verify/${activationToken}`;
+    const verificationLink = `${process.env.CLIENT_URL}/verify-email/${activationToken}`;
 
     await verification_email({
       to: email,
@@ -213,6 +227,7 @@ const login = async (req, res) => {
         message: "Otp sent successfully",
         id: user.id,
         test: login_otp,
+        otp: true,
       });
     } else {
       const previous_login = user.last_login;
@@ -227,6 +242,7 @@ const login = async (req, res) => {
           email: user.email,
           role: user.role,
           status: user.status,
+          otp: false,
           last_login: previous_login
             ? new Date(previous_login).toLocaleString("en-IN", {
                 timeZone: "Asia/Kolkata",
@@ -323,6 +339,7 @@ const verifyLoginOtp = async (req, res) => {
               })
             : null,
         },
+        success: true,
       });
     } else {
       const newAttempts = otpAttempts ? parseInt(otpAttempts) + 1 : 1;
@@ -400,6 +417,100 @@ const resendLoginOtp = async (req, res) => {
   }
 };
 
+const resetPasswordLink = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!user.is_verified) {
+      return res.status(400).json({
+        message: "Please verify your account to proceed with password reset.",
+      });
+    }
+
+    const resetToken = getResePasswordToken({ id: user.id });
+
+    const resetLink = `${process.env.CLIENT_URL}/auth/update-password/${resetToken}`;
+
+    await reset_password_link({ to: email, link: resetLink });
+
+    return res.status(200).json({
+      message: "Password reset link has been sent to your email.",
+      success: true,
+    });
+  } catch (err) {
+    return res
+      .status(500)
+      .json({ message: "Internal Server Error", error: err });
+  }
+};
+
+const updatePassword = async (req, res) => {
+  try {
+    const { token, confirmPassword, password } = req.body;
+
+    if (!token || !confirmPassword || !password) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const decodedToken = jwt.verify(token, process.env.JWT_ACTIVATION_SECRET);
+
+    const checkTokenStatus = await redisClient.get(`invalidToken_${token}`);
+    if (checkTokenStatus) {
+      return res
+        .status(400)
+        .json({ message: "This reset link has already been used" });
+    }
+
+    const user = await User.findByPk(decodedToken.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (password !== confirmPassword) {
+      return res.status(400).json({ message: "Passwords do not match" });
+    }
+
+    const isSameAsOld = await bcrypt.compare(password, user.password);
+    if (isSameAsOld) {
+      return res.status(400).json({
+        message: "New password cannot be the same as the old password",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    await redisClient.set(`invalidToken_${token}`, "invalid", { EX: 600 });
+
+    return res
+      .status(200)
+      .json({ message: "Password updated successfully", success: true });
+  } catch (err) {
+    if (err.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Reset link has expired" });
+    } else if (err.name === "JsonWebTokenError") {
+      return res.status(400).json({
+        message: "Invalid token, please request a new verification email.",
+      });
+    } else {
+      return res
+        .status(500)
+        .json({ message: "Internal Server Error", error: err.message });
+    }
+  }
+};
+
 module.exports = {
   register,
   verifyEmail,
@@ -407,4 +518,6 @@ module.exports = {
   login,
   verifyLoginOtp,
   resendLoginOtp,
+  resetPasswordLink,
+  updatePassword,
 };
