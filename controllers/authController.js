@@ -1,23 +1,24 @@
-const User = require("../models/User");
-const {
-  verification_email,
-  welcome_email,
-  login_otp_email,
-  reset_password_link,
-} = require("../utils/sendEmail");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const generateOtp = require("../utils/generateOtp");
+const { v4: uuidv4 } = require("uuid");
+
+const User = require("../models/User");
 const { redisClient } = require("../config/redis");
 const RedisKeys = require("../utils/redisKeys");
+
+const generateOtp = require("../utils/generateOtp");
+const {
+  sendVerificationEmail,
+  sendWelcomeEmail,
+  sendLoginOtpEmail,
+  sendResetPasswordEmail,
+} = require("../utils/sendEmail");
 const {
   generateAccessToken,
   generateRefreshToken,
   generateEmailVerificationToken,
-  getResePasswordToken,
+  generateResetPasswordToken,
 } = require("../utils/tokens");
-const { v4: uuidv4 } = require("uuid");
-const { use } = require("../routes/authRoute");
 
 const register = async (req, res) => {
   try {
@@ -50,7 +51,7 @@ const register = async (req, res) => {
 
     const verificationLink = `${process.env.CLIENT_URL}/verify-email/${activationToken}`;
 
-    await verification_email({
+    await sendVerificationEmail({
       to: email,
       name: name,
       verification_link: verificationLink,
@@ -94,7 +95,7 @@ const verifyEmail = async (req, res) => {
 
     await user.save();
 
-    await welcome_email({
+    await sendWelcomeEmail({
       to: user.email,
       name: user.name,
     });
@@ -133,7 +134,7 @@ const verifyEmail = async (req, res) => {
   }
 };
 
-const resendEmailVerification = async (req, res) => {
+const resendVerificationEmail = async (req, res) => {
   try {
     const { email } = req.body;
 
@@ -157,7 +158,7 @@ const resendEmailVerification = async (req, res) => {
 
     const verificationLink = `${process.env.CLIENT_URL}/verify-email/${activationToken}`;
 
-    await verification_email({
+    await sendVerificationEmail({
       to: email,
       name: existingEmail.name,
       verification_link: verificationLink,
@@ -211,7 +212,7 @@ const login = async (req, res) => {
     if (user.otp_login) {
       const login_otp = generateOtp();
 
-      await login_otp_email({
+      await sendLoginOtpEmail({
         to: email,
         otp: login_otp,
       });
@@ -403,7 +404,7 @@ const resendLoginOtp = async (req, res) => {
     await redisClient.set(otpAttemptsKey, otpAttempts + 1, { EX: 900 }); // Expires in 15 minutes
     await redisClient.set(otpCooldownKey, "true", { EX: 60 }); // Cooldown period of 60 seconds
 
-    await login_otp_email({
+    await sendLoginOtpEmail({
       to: user.email,
       otp: existingOtp,
     });
@@ -417,7 +418,7 @@ const resendLoginOtp = async (req, res) => {
   }
 };
 
-const resetPasswordLink = async (req, res) => {
+const sendResetPasswordLink = async (req, res) => {
   try {
     const { email } = req.body;
 
@@ -437,11 +438,11 @@ const resetPasswordLink = async (req, res) => {
       });
     }
 
-    const resetToken = getResePasswordToken({ id: user.id });
+    const resetToken = generateResetPasswordToken({ id: user.id });
 
     const resetLink = `${process.env.CLIENT_URL}/auth/update-password/${resetToken}`;
 
-    await reset_password_link({ to: email, link: resetLink });
+    await sendResetPasswordEmail({ to: email, link: resetLink });
 
     return res.status(200).json({
       message: "Password reset link has been sent to your email.",
@@ -511,13 +512,16 @@ const updatePassword = async (req, res) => {
   }
 };
 
+const logout = () => {};
+
 module.exports = {
   register,
   verifyEmail,
-  resendEmailVerification,
+  resendVerificationEmail,
   login,
   verifyLoginOtp,
   resendLoginOtp,
-  resetPasswordLink,
+  sendResetPasswordLink,
   updatePassword,
+  logout,
 };

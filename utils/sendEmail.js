@@ -3,7 +3,7 @@ const sgMail = require("@sendgrid/mail");
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-const verification_email = async ({ to, name, verification_link }) => {
+const sendVerificationEmail = async ({ to, name, verification_link }) => {
   try {
     const msg = {
       to,
@@ -17,14 +17,17 @@ const verification_email = async ({ to, name, verification_link }) => {
     };
 
     await sgMail.send(msg);
-    console.log(`✅ Email sent to ${to}`);
+    console.log(`✅ Verification email sent to ${to}`);
   } catch (err) {
-    console.error("❌ Error sending email:", err.response?.body || err.message);
-    throw new Error("Email not sent");
+    console.error(
+      "❌ Error sending verification email:",
+      err.response?.body || err.message
+    );
+    throw new Error(`Verification email not sent to ${to}: ${err.message}`);
   }
 };
 
-const welcome_email = async ({ to, name }) => {
+const sendWelcomeEmail = async ({ to, name }) => {
   try {
     const msg = {
       to,
@@ -37,49 +40,72 @@ const welcome_email = async ({ to, name }) => {
     };
 
     await sgMail.send(msg);
-    console.log(`✅ Email sent to ${to}`);
+    console.log(`✅ Welcome email sent to ${to}`);
   } catch (err) {
-    console.error("❌ Error sending email:", err.response?.body || err.message);
-    throw new Error("Email not sent");
+    console.error(
+      "❌ Error sending welcome email:",
+      err.response?.body || err.message
+    );
+    throw new Error(`Welcome email not sent to ${to}: ${err.message}`);
   }
 };
 
-const login_otp_email = async ({ to, otp }) => {
+const sendLoginOtpEmail = async ({ to, otp }) => {
   try {
     const msg = {
       to,
       from: { email: process.env.EMAIL_FROM, name: process.env.EMAIL_NAME },
-      subject: "Your login OTP",
-      html: `<h1>${otp}</h1>`, // HTML content instead of plain text
+      subject: "Your Login OTP",
+      html: `
+        <div style="font-family: Arial, sans-serif;">
+          <h2>Your OTP for login</h2>
+          <h1 style="color: #1a73e8;">${otp}</h1>
+          <p>This OTP is valid for 10 minutes. Do not share it with anyone.</p>
+        </div>
+      `,
     };
 
     await sgMail.send(msg);
-    console.log(`✅ Email sent to ${to}`);
+    console.log(`✅ OTP email sent to ${to}`);
   } catch (err) {
-    console.error("❌ Error sending email:", err.response?.body || err.message);
-    throw new Error("Email not sent");
+    console.error(
+      "❌ Error sending OTP email:",
+      err.response?.body || err.message
+    );
+    throw new Error(`OTP email not sent to ${to}: ${err.message}`);
   }
 };
 
-const reset_password_link = async ({ to, link }) => {
+const sendResetPasswordEmail = async ({ to, link }) => {
   try {
     const msg = {
       to,
       from: { email: process.env.EMAIL_FROM, name: process.env.EMAIL_NAME },
-      subject: "Reset Password Link",
-      html: `<h1>your link : ${link}</h1>`,
+      subject: "Reset Your Password",
+      html: `
+        <div style="font-family: Arial, sans-serif;">
+          <h2>Password Reset Request</h2>
+          <p>Click the button below to reset your password:</p>
+          <a href="${link}" style="display:inline-block;padding:10px 15px;background-color:#1a73e8;color:#fff;text-decoration:none;border-radius:5px;">Reset Password</a>
+          <p>If you did not request this, please ignore this email.</p>
+        </div>
+      `,
     };
+
     await sgMail.send(msg);
-    console.log(`✅ Email sent to ${to}`);
+    console.log(`✅ Password reset email sent to ${to}`);
   } catch (err) {
-    console.error("❌ Error sending email:", err.response?.body || err.message);
-    throw new Error("Email not sent");
+    console.error(
+      "❌ Error sending password reset email:",
+      err.response?.body || err.message
+    );
+    throw new Error(`Password reset email not sent to ${to}: ${err.message}`);
   }
 };
 
 module.exports = {
-  welcome_email,
-  verification_email,
-  login_otp_email,
-  reset_password_link,
+  sendWelcomeEmail,
+  sendVerificationEmail,
+  sendLoginOtpEmail,
+  sendResetPasswordEmail,
 };
