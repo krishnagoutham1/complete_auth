@@ -55,7 +55,7 @@ const sendLoginOtpEmail = async ({ to, otp }) => {
     const msg = {
       to,
       from: { email: process.env.EMAIL_FROM, name: process.env.EMAIL_NAME },
-      subject: "Your Login OTP",
+      subject: "Your TechMindZ Login OTP",
       html: `
         <div style="font-family: Arial, sans-serif;">
           <h2>Your OTP for login</h2>
@@ -81,7 +81,7 @@ const sendResetPasswordEmail = async ({ to, link }) => {
     const msg = {
       to,
       from: { email: process.env.EMAIL_FROM, name: process.env.EMAIL_NAME },
-      subject: "Reset Your Password",
+      subject: "Reset Your TechMindZ Password",
       html: `
         <div style="font-family: Arial, sans-serif;">
           <h2>Password Reset Request</h2>

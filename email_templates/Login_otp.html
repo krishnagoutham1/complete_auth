@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Your TechMindZ OTP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #f4f4f4;
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      }
+      .container {
+        max-width: 600px;
+        margin: auto;
+        background: #ffffff;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.06);
+      }
+      .header {
+        text-align: center;
+        padding-bottom: 20px;
+      }
+      .logo {
+        font-size: 28px;
+        font-weight: bold;
+        color: #072f53;
+        margin-bottom: 5px;
+      }
+      .otp-box {
+        text-align: center;
+        margin: 30px 0;
+        background: #072f53;
+        color: #ffffff;
+        font-size: 32px;
+        font-weight: bold;
+        letter-spacing: 4px;
+        padding: 20px;
+        border-radius: 6px;
+      }
+      .content {
+        text-align: center;
+        color: #333333;
+        font-size: 16px;
+        line-height: 1.6;
+      }
+      .footer {
+        margin-top: 30px;
+        text-align: center;
+        font-size: 13px;
+        color: #888888;
+      }
+      @media only screen and (max-width: 600px) {
+        .otp-box {
+          font-size: 26px;
+          padding: 15px;
+        }
+        .container {
+          padding: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="logo">TechMindZ</div>
+        <p style="color: #666">Your Login OTP</p>
+      </div>
+
+      <div class="content">
+        <p>Hi {{name}},</p>
+        <p>Use the OTP below to securely log in to your TechMindZ account:</p>
+      </div>
+
+      <div class="otp-box">{{otp}}</div>
+
+      <div class="content">
+        <p>This OTP is valid for 10 minutes.</p>
+        <p>
+          <strong>Do not share this code</strong> with anyone, including
+          TechMindZ staff.
+        </p>
+      </div>
+
+      <div class="footer">
+        If you didn’t request this OTP, please ignore this email.<br />
+        &copy; {{year}} TechMindZ. All rights reserved.
+      </div>
+    </div>
+  </body>
+</html>

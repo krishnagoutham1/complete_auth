@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Welcome to TechMindZ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #f6f9fc;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+      .container {
+        max-width: 600px;
+        margin: 30px auto;
+        background-color: #ffffff;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+      }
+      .header {
+        text-align: center;
+        padding-bottom: 20px;
+      }
+      .logo {
+        font-size: 28px;
+        font-weight: bold;
+        color: #072f53;
+      }
+      .greeting {
+        text-align: center;
+        font-size: 18px;
+        color: #333333;
+        margin: 20px 0;
+      }
+      .content {
+        font-size: 16px;
+        color: #444;
+        line-height: 1.6;
+      }
+      .features {
+        margin: 20px 0;
+        padding-left: 15px;
+      }
+      .features li {
+        margin-bottom: 10px;
+      }
+      .cta-button {
+        display: inline-block;
+        margin-top: 25px;
+        padding: 12px 20px;
+        background-color: #072f53;
+        color: #ffffff !important;
+        text-decoration: none;
+        font-weight: bold;
+        border-radius: 5px;
+      }
+      .footer {
+        margin-top: 30px;
+        text-align: center;
+        font-size: 13px;
+        color: #888888;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="logo">TechMindZ</div>
+      </div>
+
+      <div class="greeting">👋 Welcome, {{name}}!</div>
+
+      <div class="content">
+        <p>
+          We're excited to have you on board! TechMindZ is your go-to platform
+          to manage, grow, and succeed in your professional journey.
+        </p>
+
+        <p>Here's what you can do with TechMindZ:</p>
+        <ul class="features">
+          <li>🚀 Create and manage your personalized learning paths</li>
+          <li>📈 Track your progress with detailed reports and milestones</li>
+          <li>🎓 Earn certifications after completing courses</li>
+          <li>💬 Get guidance and feedback from industry experts</li>
+          <li>🧠 Build skills through hands-on projects and assessments</li>
+        </ul>
+
+        <p>
+          You're all set to begin! Click below to explore your dashboard and
+          start your journey with TechMindZ.
+        </p>
+
+        <p style="text-align: center">
+          <a href="{{dashboard_link}}" class="cta-button">Go to My Dashboard</a>
+        </p>
+      </div>
+
+      <div class="footer">
+        If you have any questions, feel free to reply to this email.<br />
+        &copy; {{year}} TechMindZ. All rights reserved.
+      </div>
+    </div>
+  </body>
+</html>
