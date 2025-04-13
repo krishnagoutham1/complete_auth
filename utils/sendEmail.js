@@ -3,16 +3,19 @@ const sgMail = require("@sendgrid/mail");
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
+const currentYear = new Date().getFullYear();
+
 const sendVerificationEmail = async ({ to, name, verification_link }) => {
   try {
     const msg = {
       to,
       from: { email: process.env.EMAIL_FROM, name: process.env.EMAIL_NAME },
-      templateId: process.env.SENDGRID_VERIFICATION_EMAIL_TEMPLATE_ID,
+      templateId: process.env.SENDGRID_TEMPLATE_VERIFICATION_EMAIL,
       dynamic_template_data: {
         name,
         verification_link,
         subject: "Activate your TechMindZ Account",
+        year: currentYear,
       },
     };
 
@@ -27,15 +30,17 @@ const sendVerificationEmail = async ({ to, name, verification_link }) => {
   }
 };
 
-const sendWelcomeEmail = async ({ to, name }) => {
+const sendWelcomeEmail = async ({ to, name, dashboard_link }) => {
   try {
     const msg = {
       to,
       from: { email: process.env.EMAIL_FROM, name: process.env.EMAIL_NAME },
-      templateId: process.env.SENDGRID_WELCOME_EMAIL_TEMPLATE_ID,
+      templateId: process.env.SENDGRID_TEMPLATE_WELCOME_EMAIL,
       dynamic_template_data: {
         name,
         subject: "Welcome to TechMindZ",
+        year: currentYear,
+        dashboard_link,
       },
     };
 
@@ -50,19 +55,18 @@ const sendWelcomeEmail = async ({ to, name }) => {
   }
 };
 
-const sendLoginOtpEmail = async ({ to, otp }) => {
+const sendLoginOtpEmail = async ({ to, name, otp }) => {
   try {
     const msg = {
       to,
       from: { email: process.env.EMAIL_FROM, name: process.env.EMAIL_NAME },
-      subject: "Your TechMindZ Login OTP",
-      html: `
-        <div style="font-family: Arial, sans-serif;">
-          <h2>Your OTP for login</h2>
-          <h1 style="color: #1a73e8;">${otp}</h1>
-          <p>This OTP is valid for 10 minutes. Do not share it with anyone.</p>
-        </div>
-      `,
+      templateId: process.env.SENDGRID_TEMPLATE_LOGIN_OTP,
+      dynamic_template_data: {
+        name,
+        otp,
+        subject: "Your TechMindZ Login OTP",
+        year: currentYear,
+      },
     };
 
     await sgMail.send(msg);
@@ -76,20 +80,18 @@ const sendLoginOtpEmail = async ({ to, otp }) => {
   }
 };
 
-const sendResetPasswordEmail = async ({ to, link }) => {
+const sendResetPasswordEmail = async ({ to, name, reset_link }) => {
   try {
     const msg = {
       to,
       from: { email: process.env.EMAIL_FROM, name: process.env.EMAIL_NAME },
-      subject: "Reset Your TechMindZ Password",
-      html: `
-        <div style="font-family: Arial, sans-serif;">
-          <h2>Password Reset Request</h2>
-          <p>Click the button below to reset your password:</p>
-          <a href="${link}" style="display:inline-block;padding:10px 15px;background-color:#1a73e8;color:#fff;text-decoration:none;border-radius:5px;">Reset Password</a>
-          <p>If you did not request this, please ignore this email.</p>
-        </div>
-      `,
+      templateId: process.env.SENDGRID_TEMPLATE_RESET_PASSWORD_LINK,
+      dynamic_template_data: {
+        name,
+        reset_link,
+        subject: "Reset Your TechMindZ Password",
+        year: currentYear,
+      },
     };
 
     await sgMail.send(msg);

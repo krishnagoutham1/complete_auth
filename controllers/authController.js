@@ -73,7 +73,10 @@ const verifyEmail = async (req, res) => {
   try {
     const { token } = req.params;
 
-    const decodedToken = jwt.verify(token, process.env.JWT_ACTIVATION_SECRET);
+    const decodedToken = jwt.verify(
+      token,
+      process.env.JWT_EMAIL_VERIFICATION_SECRET
+    );
     console.log(decodedToken);
     const user = await User.findByPk(decodedToken.id);
 
@@ -98,6 +101,7 @@ const verifyEmail = async (req, res) => {
     await sendWelcomeEmail({
       to: user.email,
       name: user.name,
+      dashboard_link: "https://techmindz.com/dashboard",
     });
 
     return res.json({
@@ -214,6 +218,7 @@ const login = async (req, res) => {
 
       await sendLoginOtpEmail({
         to: email,
+        name: user.name,
         otp: login_otp,
       });
 
@@ -406,10 +411,11 @@ const resendLoginOtp = async (req, res) => {
 
     await sendLoginOtpEmail({
       to: user.email,
+      name: user.name,
       otp: existingOtp,
     });
 
-    return res.status(200).json({ message: "OTP resent successfully." });
+    return res.status(200).json({ message: "OTP resent successfully." }); // missing otp left add this
   } catch (err) {
     console.error("Error resending OTP:", err);
     return res
@@ -442,7 +448,11 @@ const sendResetPasswordLink = async (req, res) => {
 
     const resetLink = `${process.env.CLIENT_URL}/auth/update-password/${resetToken}`;
 
-    await sendResetPasswordEmail({ to: email, link: resetLink });
+    await sendResetPasswordEmail({
+      to: email,
+      name: user.name,
+      reset_link: resetLink,
+    });
 
     return res.status(200).json({
       message: "Password reset link has been sent to your email.",
@@ -463,7 +473,10 @@ const updatePassword = async (req, res) => {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    const decodedToken = jwt.verify(token, process.env.JWT_ACTIVATION_SECRET);
+    const decodedToken = jwt.verify(
+      token,
+      process.env.JWT_RESET_PASSWORD_SECRET
+    );
 
     const checkTokenStatus = await redisClient.get(`invalidToken_${token}`);
     if (checkTokenStatus) {

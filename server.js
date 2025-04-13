@@ -38,7 +38,7 @@ app.get("/test", (req, res) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
     return res.status(200).json({
       message: "Authenticated request",
       user: decoded, // contains { id, role, ... }
