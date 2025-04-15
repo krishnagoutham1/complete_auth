@@ -19,6 +19,12 @@ const {
   generateEmailVerificationToken,
   generateResetPasswordToken,
 } = require("../utils/tokens");
+const {
+  updatePasswordUrl,
+  emailVerificationUrl,
+  dashboardUrl,
+} = require("../utils/page_constants");
+const { REDIS_EXPIRY } = require("../utils/constants");
 
 const register = async (req, res) => {
   try {
@@ -31,7 +37,7 @@ const register = async (req, res) => {
     }
 
     const existingUser = await User.findOne({ where: { email } });
-    console.log(existingUser, "hhhh");
+
     if (existingUser)
       return res.status(400).json({
         message: !existingUser.is_verified
@@ -49,7 +55,7 @@ const register = async (req, res) => {
 
     const activationToken = generateEmailVerificationToken({ id: newUser.id });
 
-    const verificationLink = `${process.env.CLIENT_URL}/verify-email/${activationToken}`;
+    const verificationLink = emailVerificationUrl(activationToken);
 
     await sendVerificationEmail({
       to: email,
@@ -64,7 +70,6 @@ const register = async (req, res) => {
       success: true,
     });
   } catch (err) {
-    console.log(err);
     res.status(500).json({ message: "Internal Server Error", error: err });
   }
 };
@@ -77,7 +82,7 @@ const verifyEmail = async (req, res) => {
       token,
       process.env.JWT_EMAIL_VERIFICATION_SECRET
     );
-    console.log(decodedToken);
+
     const user = await User.findByPk(decodedToken.id);
 
     if (!user) {
@@ -101,7 +106,7 @@ const verifyEmail = async (req, res) => {
     await sendWelcomeEmail({
       to: user.email,
       name: user.name,
-      dashboard_link: "https://techmindz.com/dashboard",
+      dashboard_link: dashboardUrl,
     });
 
     return res.json({
@@ -154,13 +159,11 @@ const resendVerificationEmail = async (req, res) => {
         .json({ message: "User already verified pls login" });
     }
 
-    const activationToken = jwt.sign(
-      { id: existingEmail.id },
-      process.env.JWT_ACTIVATION_SECRET,
-      { expiresIn: "10m" }
-    );
+    const activationToken = generateEmailVerificationToken({
+      id: existingEmail.id,
+    });
 
-    const verificationLink = `${process.env.CLIENT_URL}/verify-email/${activationToken}`;
+    const verificationLink = emailVerificationUrl(activationToken);
 
     await sendVerificationEmail({
       to: email,
@@ -172,9 +175,9 @@ const resendVerificationEmail = async (req, res) => {
       message:
         "New link sent successfully! Please check your email to activate your account.",
       data: { name: existingEmail.name, email },
+      success: true,
     });
   } catch (err) {
-    console.log(err);
     res.status(500).json({ message: "Internal Server Error", error: err });
   }
 };
@@ -223,8 +226,9 @@ const login = async (req, res) => {
       });
 
       await redisClient.set(RedisKeys.LOGIN_OTP(user.id), login_otp, {
-        EX: 900,
+        EX: REDIS_EXPIRY.LOGIN_OTP,
       });
+
       await redisClient.del(RedisKeys.LOGIN_OTP_ATTEMPT(user.id));
       await redisClient.del(RedisKeys.RESEND_OTP_ATTEMPT(user.id));
       await redisClient.del(RedisKeys.RESEND_OTP_COOLDOWN(user.id));
@@ -234,6 +238,7 @@ const login = async (req, res) => {
         id: user.id,
         test: login_otp,
         otp: true,
+        success: true,
       });
     } else {
       const previous_login = user.last_login;
@@ -254,11 +259,11 @@ const login = async (req, res) => {
                 timeZone: "Asia/Kolkata",
               })
             : null,
+          success: true,
         },
       });
     }
   } catch (err) {
-    console.log(err);
     res.status(500).json({ message: "Internal Server Error", error: err });
   }
 };
@@ -305,7 +310,7 @@ const verifyLoginOtp = async (req, res) => {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production", // true in prod
         sameSite: "strict",
-        maxAge: 15 * 60 * 1000, // 15 minutes
+        maxAge: COOKIE_AGE.ACCESS_TOKEN,
       });
 
       const refreshId = uuidv4();
@@ -314,7 +319,7 @@ const verifyLoginOtp = async (req, res) => {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "Strict",
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        maxAge: COOKIE_AGE.REFRESH_TOKEN_ID,
       });
 
       const refreshToken = generateRefreshToken({ id: user.id });
@@ -329,7 +334,7 @@ const verifyLoginOtp = async (req, res) => {
         RedisKeys.REFRESH_TOKEN_ID({ userId, refreshId }),
         JSON.stringify(sessionMeta),
         {
-          EX: 7 * 24 * 60 * 60,
+          EX: REDIS_EXPIRY.REFRESH_TOKEN_ID,
         }
       );
 
@@ -351,7 +356,7 @@ const verifyLoginOtp = async (req, res) => {
       const newAttempts = otpAttempts ? parseInt(otpAttempts) + 1 : 1;
 
       await redisClient.set(RedisKeys.LOGIN_OTP_ATTEMPT(userId), newAttempts, {
-        EX: 900,
+        EX: REDIS_EXPIRY.LOGIN_OTP_ATTEMPT,
       });
 
       return res.status(400).json({
@@ -360,7 +365,6 @@ const verifyLoginOtp = async (req, res) => {
       });
     }
   } catch (err) {
-    console.log(err);
     res.status(500).json({ message: "Internal Server Error", error: err });
   }
 };
@@ -390,7 +394,7 @@ const resendLoginOtp = async (req, res) => {
     const otpCooldownKey = RedisKeys.RESEND_OTP_COOLDOWN(userId);
 
     const cooldownTTL = await redisClient.ttl(otpCooldownKey);
-    console.log(cooldownTTL);
+
     if (cooldownTTL > 0) {
       return res.status(429).json({
         message: `Please wait ${cooldownTTL} seconds before resending OTP.`,
@@ -406,8 +410,15 @@ const resendLoginOtp = async (req, res) => {
       });
     }
 
-    await redisClient.set(otpAttemptsKey, otpAttempts + 1, { EX: 900 }); // Expires in 15 minutes
-    await redisClient.set(otpCooldownKey, "true", { EX: 60 }); // Cooldown period of 60 seconds
+    await redisClient.set(
+      RedisKeys.RESEND_OTP_ATTEMPT(userId),
+      otpAttempts + 1,
+      { EX: REDIS_EXPIRY.RESEND_OTP_ATTEMPT }
+    );
+
+    await redisClient.set(RedisKeys.RESEND_OTP_COOLDOWN(userId), "true", {
+      EX: REDIS_EXPIRY.RESEND_OTP_COOLDOWN,
+    });
 
     await sendLoginOtpEmail({
       to: user.email,
@@ -415,9 +426,10 @@ const resendLoginOtp = async (req, res) => {
       otp: existingOtp,
     });
 
-    return res.status(200).json({ message: "OTP resent successfully." }); // missing otp left add this
+    return res
+      .status(200)
+      .json({ message: "OTP resent successfully.", success: true }); // missing otp left add this
   } catch (err) {
-    console.error("Error resending OTP:", err);
     return res
       .status(500)
       .json({ message: "Internal Server Error", error: err.message });
@@ -446,7 +458,7 @@ const sendResetPasswordLink = async (req, res) => {
 
     const resetToken = generateResetPasswordToken({ id: user.id });
 
-    const resetLink = `${process.env.CLIENT_URL}/auth/update-password/${resetToken}`;
+    const resetLink = updatePasswordUrl(resetToken);
 
     await sendResetPasswordEmail({
       to: email,
@@ -478,7 +490,10 @@ const updatePassword = async (req, res) => {
       process.env.JWT_RESET_PASSWORD_SECRET
     );
 
-    const checkTokenStatus = await redisClient.get(`invalidToken_${token}`);
+    const checkTokenStatus = await redisClient.get(
+      RedisKeys.INVALIDATED_TOKEN(token)
+    );
+
     if (checkTokenStatus) {
       return res
         .status(400)
@@ -495,6 +510,7 @@ const updatePassword = async (req, res) => {
     }
 
     const isSameAsOld = await bcrypt.compare(password, user.password);
+
     if (isSameAsOld) {
       return res.status(400).json({
         message: "New password cannot be the same as the old password",
@@ -505,7 +521,9 @@ const updatePassword = async (req, res) => {
     user.password = hashedPassword;
     await user.save();
 
-    await redisClient.set(`invalidToken_${token}`, "invalid", { EX: 600 });
+    await redisClient.set(RedisKeys.INVALIDATED_TOKEN(token), "invalid", {
+      EX: REDIS_EXPIRY.INVALIDATED_TOKEN,
+    });
 
     return res
       .status(200)

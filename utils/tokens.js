@@ -1,26 +1,27 @@
 const jwt = require("jsonwebtoken");
+const { JWT_EXPIRY } = require("./constants");
 
 const generateEmailVerificationToken = (payload) => {
   return jwt.sign(payload, process.env.JWT_EMAIL_VERIFICATION_SECRET, {
-    expiresIn: "10m",
+    expiresIn: JWT_EXPIRY.EMAIL_VERIFICATION,
   });
 };
 
 const generateResetPasswordToken = (payload) => {
   return jwt.sign(payload, process.env.JWT_RESET_PASSWORD_SECRET, {
-    expiresIn: "15m",
+    expiresIn: JWT_EXPIRY.RESET_PASSWORD,
   });
 };
 
 const generateAccessToken = (payload) => {
   return jwt.sign(payload, process.env.JWT_ACCESS_SECRET, {
-    expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || "15m",
+    expiresIn: JWT_EXPIRY.ACCESS_TOKEN,
   });
 };
 
 const generateRefreshToken = (payload) => {
   return jwt.sign(payload, process.env.JWT_REFRESH_SECRET, {
-    expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "7d",
+    expiresIn: JWT_EXPIRY.REFRESH_TOKEN,
   });
 };
 
