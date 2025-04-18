@@ -17,6 +17,13 @@ const REDIS_EXPIRY = {
 const COOKIE_AGE = {
   ACCESS_TOKEN: 15 * 60 * 1000, // 15 minutes in ms
   REFRESH_TOKEN_ID: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
+  USER_ID: 30 * 24 * 60 * 1000, // 30 days
 };
 
-module.exports = { JWT_EXPIRY, REDIS_EXPIRY, COOKIE_AGE };
+const COOKIE_KEY_NAMES = {
+  ACCESS_TOKEN: "access_token",
+  REFRESH_TOKEN_ID: "refresh_id",
+  USER_ID: "user_id",
+};
+
+module.exports = { JWT_EXPIRY, REDIS_EXPIRY, COOKIE_AGE, COOKIE_KEY_NAMES };

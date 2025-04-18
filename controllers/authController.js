@@ -24,7 +24,12 @@ const {
   emailVerificationUrl,
   dashboardUrl,
 } = require("../utils/page_constants");
-const { REDIS_EXPIRY } = require("../utils/constants");
+const { REDIS_EXPIRY, COOKIE_AGE } = require("../utils/constants");
+const {
+  setAccessTokenCookie,
+  setUserIdCookie,
+  setRefreshIdCookie,
+} = require("../utils/cookies");
 
 const register = async (req, res) => {
   try {
@@ -306,21 +311,13 @@ const verifyLoginOtp = async (req, res) => {
 
       const accessToken = generateAccessToken({ id: user.id, role: user.role });
 
-      res.cookie("accessToken", accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production", // true in prod
-        sameSite: "strict",
-        maxAge: COOKIE_AGE.ACCESS_TOKEN,
-      });
+      setAccessTokenCookie(res, accessToken);
+
+      setUserIdCookie(res, userId);
 
       const refreshId = uuidv4();
 
-      res.cookie("refresh_id", refreshId, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "Strict",
-        maxAge: COOKIE_AGE.REFRESH_TOKEN_ID,
-      });
+      setRefreshIdCookie(res, refreshId);
 
       const refreshToken = generateRefreshToken({ id: user.id });
 
@@ -469,6 +466,7 @@ const sendResetPasswordLink = async (req, res) => {
     return res.status(200).json({
       message: "Password reset link has been sent to your email.",
       success: true,
+      test: resetLink,
     });
   } catch (err) {
     return res

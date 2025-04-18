@@ -7,6 +7,7 @@ const cookieParser = require("cookie-parser");
 const bodyParser = require("body-parser");
 const helmet = require("helmet");
 const compression = require("compression");
+const jwt = require("jsonwebtoken");
 
 const { connectDB, syncDB } = require("./config/db");
 const { connectRedis } = require("./config/redis");
@@ -28,7 +29,11 @@ connectDB().then(syncDB);
 connectRedis(); // Connect to Redis
 
 // Test Route
-const jwt = require("jsonwebtoken");
+const verifyAccessToken = require("./middleware/authentations");
+
+app.get("/demo", verifyAccessToken, async (req, res) => {
+  res.status(200).json({ message: "hi" });
+});
 
 app.get("/test", (req, res) => {
   const token = req.cookies?.accessToken;
